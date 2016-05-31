@@ -1,0 +1,10 @@
+*.pyc
+venv
+*.swp
+.gitignore
+
+# Dont commit private configs
+*.json
+
+# TbSlack log files
+*.log

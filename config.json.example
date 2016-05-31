@@ -1,0 +1,14 @@
+{
+  "testing" : true,
+  "servers" : [
+    {
+      "name" : "Slack Name",
+      "username" : "FoodBot",
+      "channel" : "#somechannel",
+      "admin" : "@yourname",
+      "batch_time" : 0,
+      "batch_amount" : 0,
+      "url" : "https://hooks.slack.com/services/your_webhook_rl"
+    }
+  ]
+}
