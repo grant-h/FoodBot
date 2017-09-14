@@ -11,7 +11,7 @@ This is unversioned as no releases are planned.
 
 ## Example Output
 
-![Imgur](https://i.imgur.com/lLo9dyN.png)
+<img src="https://i.imgur.com/lLo9dyN.png" alt="FoodBot Output" width="50%" />
 
 ## Installing and Running
 
