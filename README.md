@@ -1,6 +1,6 @@
 # FoodBot
 FoodBot is a SlackBot for aggregating restarant menus and posting them when wanted.
-Currently hardcoded to support only a single restaurant: The Arrendondo Café in the University of Florida.
+Currently hardcoded to support only a single restaurant: The Arredondo Café in the University of Florida.
 
 This is unversioned as no releases are planned.
 

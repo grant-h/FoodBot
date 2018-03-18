@@ -162,7 +162,7 @@ class FoodBotSlack():
 
         today_note = "Today, {}".format(datetime.today().strftime("%A, %B %d"))
 
-        extra = {"title" : "Arrendondo Café - {}".format(today_note), "title_link" : FOOD_URL}
+        extra = {"title" : "Arredondo Café - {}".format(today_note), "title_link" : FOOD_URL}
 
         # make the post to all servers!
         for i in self.slack:
