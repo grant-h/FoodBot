@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
-# An IRC tweet -> Slack bot in python
+# A simple Food focused Slack bot in python
 #
 # Grant Hernandez <grant.h.hernandez@gmail.com>
 

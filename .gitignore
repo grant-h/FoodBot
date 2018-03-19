@@ -1,10 +1,9 @@
 *.pyc
-venv
 *.swp
-.gitignore
+*.swo
 
 # Dont commit private configs
 *.json
 
-# TbSlack log files
+# Log files
 *.log
