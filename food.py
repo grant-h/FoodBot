@@ -7,7 +7,7 @@ EMOJI_FOOD = [
 "cow2[beef|cow]",
 "crab",
 "cheese_wedge[cheese]",
-"pig2[bacon|pig]",
+"pig2[bacon|pig|pork]",
 "seedling[bean|beans|green|pea|peas|vegetable|vegetables]",
 "mushroom[mushrooms]",
 
@@ -59,7 +59,9 @@ EMOJI_FOOD = [
 "sweet_potato[potatoes|potato]",
 "eggplant",
 "tomato",
-"corn"
+"corn",
+"honey_pot[honey]",
+"carrot[carrots]"
 ]
 
 EMOJI_DICT = {}
