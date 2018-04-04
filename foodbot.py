@@ -13,6 +13,8 @@ from food import EMOJI_DICT
 import re
 import json
 import urllib2
+import pprint
+import argparse
 
 # From http://tools.medialab.sciences-po.fr/iwanthue/index.php
 # Sorted by their color difference
@@ -31,23 +33,31 @@ class FoodBotSlack():
 
     def __init__(self,
             slackServers,
-            testing=False):
+            testing=False,
+            mock=False):
         self.colormap = {}
         self.colormapIter = 0
         self.testing = testing
+        self.mock = mock
 
         self.slack = slackServers
 
         if self.testing:
             print("** TESTING MODE ACTIVE")
 
-        for i in slackServers:
-            print(u"- Broadcasting to {}".format(i))
+        if self.mock:
+            print("** MOCK MODE ACTIVE")
+        else:
+            for i in slackServers:
+                print(u"- Broadcasting to {}".format(i))
 
     def scrape(self, url):
         response = urllib2.urlopen(url)
         html = response.read().decode('utf-8', 'ignore')
 
+        return self.parse_html(html)
+
+    def parse_html(self, html):
         soup = BeautifulSoup(html, "html.parser")
 
         data = soup.table("td", {"class" : ["dateclass", "menuitems"]})
@@ -76,19 +86,75 @@ class FoodBotSlack():
 
         return self.process_data(data_table)
 
+    def split_weeks(self, table):
+        dow = [u"Monday", u"Tuesday", u"Wednesday", u"Thursday", u"Friday"]
+        week = []
+
+        start = -1
+        rowi = 0
+
+        def rec_find(obj, item):
+            if isinstance(obj, list):
+                for x in obj:
+                    if isinstance(x, list):
+                        if rec_find(x, item):
+                            return True
+                    else:
+                        if x.find(item) != -1:
+                            return True
+
+                return False
+            else:
+                return obj.find(item) != -1
+
+        # Column header finding heuristic
+        while rowi < len(table):
+            row = table[rowi]
+
+            if start == -1:
+                found = 0
+
+                # for each column, search for the day of the week
+                for col in row:
+                    for d in dow:
+                        if rec_find(col, d):
+                            found += 1
+                            break
+
+                if found > 2:
+                    start = rowi
+            else:
+                found = 0
+
+                # for each column, search for the day of the week
+                for col in row:
+                    for d in dow:
+                        if rec_find(col, d):
+                            found += 1
+                            break
+
+                if found > 2:
+                    week += [table[start:rowi]]
+                    start = rowi
+
+            rowi += 1
+
+        if start != -1:
+            week += [table[start:]]
+
+        return week
+
     def process_data(self, table):
-        if len(table) < 8:
+        weeks = self.split_weeks(table)
+
+        if len(weeks) < 1:
             raise ValueError("No valid weeks found after parsing")
 
-        week1 = table[:8]
-        if self.process_week(week1):
-            return
-
-        if len(table) >= 16:
-            week2 = table[8:]
-            if self.process_week(week2):
+        for week in weeks:
+            if self.process_week(week):
                 return
 
+        print pprint.pprint(weeks)
         raise ValueError("Found at least one valid week, but never found a matching day")
 
     def process_week(self, week):
@@ -149,7 +215,7 @@ class FoodBotSlack():
 
                         if emoji not in icons:
                             icons += [emoji]
-                    
+
                 out += u"• " + bullet + " " + "".join(icons) + "\n"
 
             text += out + "\n"
@@ -164,6 +230,12 @@ class FoodBotSlack():
 
         extra = {"title" : "Arredondo Café - {}".format(today_note), "title_link" : FOOD_URL}
 
+        if self.mock:
+            print extra
+            print header
+            print body
+            return True
+
         # make the post to all servers!
         for i in self.slack:
             i.postRich(header, body, color, "", extra)
@@ -174,28 +246,36 @@ def banner():
     print("FoodBotSlack by Grant")
     print("")
 
-
-def usage():
-    import sys
-    global EXENAME
-
-    print("usage: " + EXENAME + " config.json")
-    sys.exit(1)
-
 def main(args):
     banner()
 
     slackServers = []
     configFp = None
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config")
+    parser.add_argument("--test-file")
+
+    args = parser.parse_args()
+
     try:
-        configName = args[0] if len(args) else "config.json"
+        configName = args.config if args.config else "config.json"
         configFp = open(configName, "r")
     except IOError:
-        usage()
+        parser.error("Invalid configuration file")
 
-    config = json.load(configFp)
+    if args.test_file:
+        bot = FoodBotSlack(None, mock=True)
+        return bot.parse_html(open(args.test_file, 'r').read())
+
+    try:
+        config = json.load(configFp)
+    except ValueError as e:
+        parser.error("JSON parsing error: " + e.message)
+
     configFp.close()
+
+    print("Loaded configration file %s" % configName)
 
     testing = config["testing"]
 
