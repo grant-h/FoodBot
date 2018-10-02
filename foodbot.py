@@ -27,7 +27,7 @@ COLORS = ["#6a0032", "#01cf49", "#604bf7", "#74c200", "#8900b2",
           "#c1d693", "#5a005b", "#bdd2cc", "#2a1632", "#fcbfb8",
           "#005053", "#ff99bf", "#00556d"]
 
-FOOD_URL = "https://www.bsd.ufl.edu/dining/Menus/ArMenu.aspx"
+FOOD_URL = "https://gatordining.campusdish.com/LocationsAndMenus/ArrendonoReitzUnion?locationId=4041&storeId=&mode=Weekly"
 
 class FoodBotSlack():
 
@@ -60,153 +60,70 @@ class FoodBotSlack():
     def parse_html(self, html):
         soup = BeautifulSoup(html, "html.parser")
 
-        data = soup.table("td", {"class" : ["dateclass", "menuitems"]})
-        data_table = []
-        row_data = []
-        col = 0
+        days = soup.findAll("div", {"class" : ["menu__day"]})
 
-        for d in data:
-            if "dateclass" in d['class']:
+        menu_week = []
 
-                row_data += [d.text.strip()]
-            elif "menuitems" in d['class']:
-                foods = []
-                for food in d("tr"):
-                    foods += [food.font.text.strip()]
+        for d in days:
+            day_name = d(class_="dayName")[0]
+            day_name = day_name.text.strip()
 
-                row_data += [foods]
-                new_row = True
+            menu_day = {"day" : day_name, "stations": []}
 
-            col += 1
+            stations = d(class_="menu__station")
 
-            if col == 6:
-                data_table += [row_data]
-                row_data = []
-                col = 0
+            for station in stations:
+                station_data = {}
+                st_name = station(class_="stationName")[0]
+                st_name = st_name.text.strip()
 
-        return self.process_data(data_table)
+                # Skip the salad bar, as it's spammy
+                if "salad" in st_name.lower():
+                    continue
 
-    def split_weeks(self, table):
-        dow = [u"Monday", u"Tuesday", u"Wednesday", u"Thursday", u"Friday"]
-        week = []
+                station_data["name"] = st_name
+                station_data["items"] = []
 
-        start = -1
-        rowi = 0
+                items = station(class_="menu__item")
 
-        def rec_find(obj, item):
-            if isinstance(obj, list):
-                for x in obj:
-                    if isinstance(x, list):
-                        if rec_find(x, item):
-                            return True
-                    else:
-                        if x.find(item) != -1:
-                            return True
+                for item in items:
+                    item_name = item(class_="item__name")[0]
+                    item_name = item_name.text.strip()
+                    station_data["items"] += [item_name]
 
-                return False
-            else:
-                return obj.find(item) != -1
+                menu_day["stations"] += [station_data]
 
-        # Column header finding heuristic
-        while rowi < len(table):
-            row = table[rowi]
+            menu_week += [menu_day]
 
-            if start == -1:
-                found = 0
-
-                # for each column, search for the day of the week
-                for col in row:
-                    for d in dow:
-                        if rec_find(col, d):
-                            found += 1
-                            break
-
-                if found > 2:
-                    start = rowi
-            else:
-                found = 0
-
-                # for each column, search for the day of the week
-                for col in row:
-                    for d in dow:
-                        if rec_find(col, d):
-                            found += 1
-                            break
-
-                if found > 2:
-                    week += [table[start:rowi]]
-                    start = rowi
-
-            rowi += 1
-
-        if start != -1:
-            week += [table[start:]]
-
-        return week
-
-    def process_data(self, table):
-        weeks = self.split_weeks(table)
-
-        if len(weeks) < 1:
-            raise ValueError("No valid weeks found after parsing")
-
-        for week in weeks:
-            if self.process_week(week):
-                return
-
-        print pprint.pprint(weeks)
-        raise ValueError("Found at least one valid week, but never found a matching day")
+        return self.process_week(menu_week)
 
     def process_week(self, week):
+        import calendar
         today = datetime.today()
-
-        times = week[0]
-        col = -1
-
-        for i, t in enumerate(times):
-            t = t.encode('ascii', 'ignore')
-
-            if t is '':
-                continue
-
-            ref = datetime.strptime(t, '%A,%B%d')
-
-            if ref.month == today.month and ref.day == today.day:
-                col = i
-                break
-
-        if col == -1:
-            return False
-
-        foods = []
-        for i in week[1:]:
-            for this_col,j in enumerate(i):
-                if this_col == col:
-                    foods += [j]
-
-        food_types = []
-        for i in week[1:]:
-            for this_col,j in enumerate(i):
-                if this_col == 0:
-                    food_types += [j]
 
         color = COLORS[(today.month + today.day + today.year) % len(COLORS)]
 
-        return self.output_data(color, food_types, foods)
+        for day in week:
+            if day["day"] == calendar.day_name[today.weekday()]:
+                return self.output_data(day, color)
 
-    def output_data(self, color, food_types, data):
+        raise ValueError("Unable to find today's day of the week in page")
+
+    def output_data(self, day, color):
         text = u""
         closed = False
 
-        for typeIdx, cat in enumerate(data):
-            out = u"*"+food_types[typeIdx] + "*\n"
+        for station in day["stations"]:
+            out = u"*"+station["name"].capitalize() + "*\n"
 
-            for bullet in cat:
-                if 'closed' in bullet.lower():
-                    closed = True
-                    break
+            for item in station["items"]:
+                item = item.capitalize()
+                # TODO: closed detection
+                #if 'closed' in bullet.lower():
+                #    closed = True
+                #    break
 
-                words = bullet.encode('ascii', 'ignore').lower().split(" ")
+                words = item.encode('ascii', 'ignore').lower().split(" ")
                 icons = []
 
                 for w in words:
@@ -216,7 +133,7 @@ class FoodBotSlack():
                         if emoji not in icons:
                             icons += [emoji]
 
-                out += u"• " + bullet + " " + "".join(icons) + "\n"
+                out += u"• " + item + " " + "".join(icons) + "\n"
 
             text += out + "\n"
 
