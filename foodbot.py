@@ -124,6 +124,19 @@ class FoodBotSlack():
                 #    break
 
                 words = item.encode('ascii', 'ignore').lower().split(" ")
+
+                def just_text(w):
+                    m = re.match('[a-zA-Z]+', w)
+
+                    if m:
+                        return m.group(0)
+                    else:
+                        return None
+
+                words = map(just_text, words)
+
+                print words
+
                 icons = []
 
                 for w in words:

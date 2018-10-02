@@ -59,15 +59,19 @@ EMOJI_FOOD = [
 "sweet_potato[potatoes|potato]",
 "eggplant",
 "tomato",
-"corn",
+"corn[cornbread]",
 "honey_pot[honey]",
-"carrot[carrots]"
+"carrot[carrots]",
+"hot_pepper[pepper|peppers]",
+"broccoli",
+
+"flag-it[italy|italian]",
 ]
 
 EMOJI_DICT = {}
 
 for emoji_spec in EMOJI_FOOD:
-    match = re.match(r"([a-z0-9_]+)(\[[a-z0-9_| ]+\])?", emoji_spec)
+    match = re.match(r"([a-z0-9_-]+)(\[[a-z0-9_| ]+\])?", emoji_spec)
 
     key = match.group(1)
 
