@@ -107,21 +107,16 @@ class FoodBotSlack():
             if day["day"] == calendar.day_name[today.weekday()]:
                 return self.output_data(day, color)
 
-        raise ValueError("Unable to find today's day of the week in page")
+        return self.output_data(day, color, closed=True)
 
-    def output_data(self, day, color):
+    def output_data(self, day, color, closed=False):
         text = u""
-        closed = False
 
         for station in day["stations"]:
             out = u"*"+station["name"].capitalize() + "*\n"
 
             for item in station["items"]:
                 item = item.capitalize()
-                # TODO: closed detection
-                #if 'closed' in bullet.lower():
-                #    closed = True
-                #    break
 
                 words = item.encode('ascii', 'ignore').lower().split(" ")
 
@@ -150,25 +145,29 @@ class FoodBotSlack():
 
             text += out + "\n"
 
-        header = ""
         if closed:
             body = u"The café is closed today :slightly_frowning_face:"
         else:
             body = text
 
         today_note = "Today, {}".format(datetime.today().strftime("%A, %B %d"))
+        header = "Arredondo Café - {}".format(today_note)
 
-        extra = {"title" : "Arredondo Café - {}".format(today_note), "title_link" : FOOD_URL}
+        self.output_slack(header, body, FOOD_URL, color)
+
+        return True
+
+    def output_slack(self, header, body, link, color):
+        extra = {"title" : header, "title_link" : link}
 
         if self.mock:
             print extra
-            print header
             print body
             return True
 
         # make the post to all servers!
         for i in self.slack:
-            i.postRich(header, body, color, "", extra)
+            i.postRich("", body, color, "", extra)
 
         return True
 
