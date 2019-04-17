@@ -4,7 +4,11 @@
 #
 # Grant Hernandez <grant.h.hernandez@gmail.com>
 
-from IPython import embed
+try:
+    from IPython import embed
+except ImportError:
+    pass
+
 from bs4 import BeautifulSoup
 from server import SlackServer, SlackPost
 from datetime import datetime

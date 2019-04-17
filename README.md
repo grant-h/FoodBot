@@ -15,10 +15,10 @@ This is unversioned as no releases are planned.
 
 ## Installing and Running
 
-All dependencies are provided by pip
+All dependencies are provided by pip. It's recommended you create a virtual environment before continuing.
 
 ```
-pip -r requirements.txt
+pip install -r requirements.txt
 ```
 
 Then all you need to run is
