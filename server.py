@@ -94,7 +94,9 @@ class SlackServer():
         if self.testing:
             data.update({"channel": self.admin, "username": self.username})
         else:
-            data.update({"channel": self.channel, "username": self.username})
+            # including channel name on newer slack APIs will result in a 404 channel_not_found error
+            # the default is to use the incoming webhook channel
+            data.update({"username": self.username})
 
         # print "Sending: " + str(data)
         import urllib2
@@ -105,7 +107,8 @@ class SlackServer():
             # clear posts
             self.posts = []
         except urllib2.HTTPError as e:
-            print("EXCEPTION: " + str(e))
+            error_msg = e.read() 
+            print("EXCEPTION: " + str(e) + ", Slack: " + error_msg)
 
     def __str__(self):
         if self.batchTime:
