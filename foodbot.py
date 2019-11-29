@@ -9,9 +9,11 @@ try:
 except ImportError:
     pass
 
+import calendar
+
 from bs4 import BeautifulSoup
 from server import SlackServer, SlackPost
-from datetime import datetime
+from datetime import datetime, timedelta
 from food import EMOJI_DICT
 
 import re
@@ -102,18 +104,51 @@ class FoodBotSlack():
         return self.process_week(menu_week)
 
     def process_week(self, week):
-        import calendar
         today = datetime.today()
+        # today = datetime.today() + timedelta(days=4) # MOCKING
+        yesterday = today - timedelta(days=1)
+
+        today_name = calendar.day_name[today.weekday()]
+        yesterday_name = calendar.day_name[yesterday.weekday()]
 
         color = COLORS[(today.month + today.day + today.year) % len(COLORS)]
 
-        for day in week:
-            if day["day"] == calendar.day_name[today.weekday()]:
-                return self.output_data(day, color)
+        days_available = reduce(lambda x, y: x.update(y), map(lambda x: {x["day"] : x}, week))
 
-        return self.output_data(day, color, closed=True)
+        closed_today = today_name not in days_available
+        closed_yesterday = today_name != u'Monday' and yesterday_name not in days_available
 
-    def output_data(self, day, color, closed=False):
+        if closed_today:
+            # output nothing
+            if closed_yesterday:
+                print("Café was closed yesterday and today. No notification necessary.")
+                return True
+
+            # determine when it reopens this week (if it does)
+            open_this_week = False
+            for i in range(today.weekday()+1, 7):
+                day_name = calendar.day_name[i]
+
+                if day_name in days_available:
+                    open_this_week = True
+                    break
+
+            if open_this_week:
+                body = u"The café is closed today and will reopen {} :slightly_frowning_face:".format(day_name)
+            else:
+                body = u"The café is closed for the rest of the week :sob:"
+        else:
+            day = days_available[today_name]
+            body = self.format_day(day, color)
+
+        today_note = "Today, {}".format(today.strftime("%A, %B %d"))
+        header = "Arredondo Café - {}".format(today_note)
+
+        self.output_slack(header, body, FOOD_URL, color)
+
+        return True
+
+    def format_day(self, day, color):
         text = u""
 
         for station in day["stations"]:
@@ -149,17 +184,7 @@ class FoodBotSlack():
 
             text += out + "\n"
 
-        if closed:
-            body = u"The café is closed today :slightly_frowning_face:"
-        else:
-            body = text
-
-        today_note = "Today, {}".format(datetime.today().strftime("%A, %B %d"))
-        header = "Arredondo Café - {}".format(today_note)
-
-        self.output_slack(header, body, FOOD_URL, color)
-
-        return True
+        return text
 
     def output_slack(self, header, body, link, color):
         extra = {"title" : header, "title_link" : link}
