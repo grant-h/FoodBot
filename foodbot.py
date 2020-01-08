@@ -113,7 +113,11 @@ class FoodBotSlack():
 
         color = COLORS[(today.month + today.day + today.year) % len(COLORS)]
 
-        days_available = reduce(lambda x, y: x.update(y), map(lambda x: {x["day"] : x}, week))
+        def join(x, y):
+            x.update(y)
+            return x
+
+        days_available = reduce(join, map(lambda x: {x["day"] : x}, week))
 
         closed_today = today_name not in days_available
         closed_yesterday = today_name != u'Monday' and yesterday_name not in days_available
